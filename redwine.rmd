@@ -1,0 +1,331 @@
+#Red Wine Exploration by Emily S. Carroll
+========================================================
+
+###References: N/A
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+#install.packages('knitr', dependencies = T)
+#install.packages('dplyr')
+#install.packages('ggplot2')
+
+library(knitr)
+library(dplyr,warn.conflicts = FALSE)
+library(ggplot2)
+```
+
+```{r echo=FALSE, Load_the_Data}
+redWine <- read.csv('wineQualityReds.csv')
+```
+
+> This report explores a dataset containing chemical properties and quality rating of over 1,500 red wines. Wine experts rated each wine on a scale of 0 (very bad) to 10 (very good).
+
+# Univariate Plots Section
+
+```{r echo=FALSE}
+str(redWine)
+```
+```{r echo=FALSE}
+summary(redWine)
+```
+
+> Our data consists of 12 variables and 1599 different wines.
+
+```{r echo=FALSE}
+ggplot(aes(x = quality), data = redWine, binwidth = 1) +
+  geom_histogram()
+```
+>Here, we examine the wine's quality rating with a histogram. The majority of the wine falls within a 5 and 6 rating, which means it's ranked as average. More wines are rated higher than average, while fewer wines are rated lower than average.
+
+>We will now look at various chemical properties of the wines.
+
+```{r echo=FALSE}
+qplot(x = chlorides, data = redWine, binwidth = .025)
+```
+
+>As you can see, much of the data falls on the left side of the chart below 0.2. I wonder - how does the 800+ bin breaks down? To find out, I will transform the x-axis to only show the majority of the data.  
+
+```{r echo=FALSE}
+qplot(x = chlorides, data = redWine, binwidth = .005) +
+  scale_x_continuous(limits = c(0, 0.2))
+```
+
+>That's better. With this view, we can get a much better understanding of how the chloride data is distributed. Just for good measure, I will cut the data down even further and decrease bin sizes. This will result in even more precise plotting.
+
+```{r echo=FALSE}
+qplot(x = chlorides, data = redWine, binwidth = .001) +
+  scale_x_continuous(limits = c(0.025, 0.15))
+```
+
+>Here is a clear picture of the chloride data. Instead of a huge bin containing 800 data points, the tallest bin contains 70. These 70 wines contain 0.08 clorides. The remaining data is evenly distributed below and above that threshold.
+
+>One thing I noticed in the data is that many wines do not contain citric acid. I'd like to see how that breaks down.
+
+```{r echo=FALSE}
+qplot(x = citric.acid, data = redWine, binwidth = .01)
+```
+>Almost 150 wines contain no citric acid at all. Later in this report, I will be examining whether citric acid levels correlate to quality scores.
+
+>In the meantine, I've displayed a summary of various variables that are of particiular interest to me.
+
+```{r echo=FALSE}
+summary(redWine$quality)
+```
+>Quality summary
+
+```{r echo=FALSE}
+summary(redWine$alcohol)
+```
+>Alcohol summary
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+>There are 1,599 red wines in the dataset with 12 features (fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, alcohol, and quality). All variables are ordered factor variables.
+
+>Other observations:
+
+>Most wines contain citric acid.
+More wines contain 0.08 cholride than any other amount of chloride.
+Most wines that contain citric acid have a level of 0.26 or higher.
+The average amount of alcohol in the wines is 10.42.
+The median quality rating for the wines is 6.0.
+
+### What is/are the main feature(s) of interest in your dataset?
+>The primary features of interest to me are alcohol level and quality rating. I am particularly curious about whether alcohol levels are correlated with quality rating in either direction.
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+>My guess is that a combination of alcohol level, acidity, and pH will play a role in predicting a given wine's quality score.
+
+### Did you create any new variables from existing variables in the dataset?
+>For this analysis, creating a new variable was not neccessary.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+>Yes. I founda very large range of data when looking at chlorides. To fix this, I adjusted the x-axis to better focus on the data I wanted to work with. This operation cut out outliers that would have skewed my analysis.
+
+# Bivariate Plots Section
+
+> For this section, I decided to take a look at alcohol levels and their correlation with various factors.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = pH), data = redWine) +
+  geom_jitter()
+```
+> Alcohol and pH: here, there doesn't seem to be a clear-cut correlation.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = quality), data = redWine) +
+  geom_jitter()
+```
+> Alcohol and quality: This chart shows that quality ratings are clustered within certain regions, but alcohol levels do not seem to significantly impact quality ratings. I wonder if this information would look different if charted differently? I'll create a chart with a summary line below.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = quality), data = redWine) +
+  geom_jitter(alpha = 0.05,
+              color = 'blue') +
+  coord_trans(y = 'sqrt') +
+  geom_line(stat = 'summary', fun.y = mean)
+```
+
+>The summary line provides a beter insight into the data. There is only a slight trend up when it comes to alcohol level's impact on quality rating. However,is there a better way to understand the data? My guess is that looking at mean and median would be a good starting place. I will create a table below, exploring the mean and median quality per alcohol level.
+
+```{r}
+alc_cont <- group_by(redWine, alcohol)
+redWine.alc_quality<- summarise(alc_cont,
+          quality_mean = mean(quality),
+          quality_median = median(quality),
+          n = n())
+redWine.alc_quality <- arrange(redWine.alc_quality, alcohol)
+
+head(redWine.alc_quality)
+```
+
+>In the chart above, we see the mean and median qulaity score organized by alcohol level. This organization of the data is more clear than the plots before it. This chart clearly shows there is no meaningful relationship between alcohol level and quality rating.
+
+>Next, I will pivot away from looking at alcohol levels. As mentioned above, I'm curious - do pH, acidity, or sulphate levels correlate to quality rating in wine?
+
+```{r echo=FALSE}
+ggplot(aes(x = pH, y = quality), data = redWine) +
+  geom_jitter()
+```
+
+>ph: This scatter plot resembles a circle, which implies there isn't a strong correlation in one direction or another.
+
+```{r echo=FALSE}
+ggplot(aes(x = fixed.acidity, y = quality), data = redWine) +
+  geom_jitter()
+```
+
+>Fixed acidity: The data points are clustered around 7-8 acidity and 5-6 quality. I believe the chart is showing us that these areas are the intersections that most wines fall within.
+
+```{r echo=FALSE}
+ggplot(aes(x = sulphates, y = quality), data = redWine) +
+  geom_jitter()
+```
+
+>Sulphates: Once again, the data points are clustered toward the left center of the chart, the place that most wines fall.
+
+>Right now, it doesn't look like there is any one variable that correlates to high quality scores. At this point, I'm a little frustrated with my data. I thought there would be a more clear-cut way to predict quality outcomes in red wines. Perhaps a combination of a couple variables would be predictive. In the next section, I want to look into this.
+
+>However, I'm curious about relationships between other variables. I'll try a few below.
+
+```{r echo=FALSE}
+ggplot(aes(x = residual.sugar, y = citric.acid), data = redWine) +
+  geom_jitter()
+
+```
+
+>The above graph shows that much of the residual suagr lies before 4. Citric acid concentrationsm are highest at levels underneath 0.75.
+
+```{r echo=FALSE}
+ggplot(aes(x = total.sulfur.dioxide, y = free.sulfur.dioxide), data = redWine) +
+  geom_jitter()
+```
+
+>Finally, a graph that shows meaningful correlation! As you can see, the data tends to stay within a cone-shape. The more total sulfur dioxide is present, the more free sulfur dioxide is likely to be present. This makes sense, as the names of the two variables are correlated.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+>In this section, I was out to find whether characteristics - primarily alcohol levels, acidity, and pH - directly correlate to quality ratings in red wine. Though I examined several variables, I was not able to find correlations.
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+>The relationship between the free and total sulfur dioxide was interesting to me. I felt like I finally found a variable comparison that was meaningful.
+
+### What was the strongest relationship you found?
+
+>Again, the strongest relationship I found was between the free sulfur dioxide and the total sulfur dioxide.
+
+
+# Multivariate Plots Section
+
+```{r echo=FALSE}
+redWine.quality_by_alcohol_pH <- redWine %>%
+  filter(!is.na(pH)) %>%
+  group_by(alcohol, pH) %>%
+  summarise(mean_quality = mean(quality),
+            median_quality = median(quality),
+            n =n()) %>%
+  ungroup() %>%
+  arrange(alcohol)
+
+ggplot(aes(x = alcohol, y = median_quality),
+       data = redWine.quality_by_alcohol_pH) +
+  geom_line(aes(color = pH,))
+```
+
+```{r echo=FALSE}
+redWine.alcohol_by_ph_quality <- redWine %>%
+  filter(!is.na(quality)) %>%
+  group_by(pH, quality) %>%
+  summarise(mean_alcohol = mean(alcohol),
+            median_alcohol = median(alcohol),
+            n =n()) %>%
+  ungroup() %>%
+  arrange(pH)
+
+ggplot(aes(x = pH, y = median_alcohol),
+       data = redWine.alcohol_by_ph_quality) +
+  geom_line(aes(color = quality))
+```
+
+```{r echo=FALSE}
+redWine.ph_by_quality_alcohol <- redWine %>%
+  filter(!is.na(alcohol)) %>%
+  group_by(quality, alcohol) %>%
+  summarise(mean_pH = mean(pH),
+            median_pH = median(pH),
+            n =n()) %>%
+  ungroup() %>%
+  arrange(quality)
+
+ggplot(aes(x = quality, y = median_pH),
+       data = redWine.ph_by_quality_alcohol) +
+  geom_line(aes(color = alcohol))
+```
+
+>To start off the multivariate section, I wanted to create three seperate data frames in order to explore the same three variables in different ways. I felt that by switching around how the data was aggregated, I could see findings in a more comprehensive way. The three variables I chose to focus on are quality, alcohol, and pH.
+
+>I also made use of color in this section. I wanted to see if this would allow better or more clear visualization of the data.I believe it did so.
+
+```{r echo=FALSE}
+redWine.quality_by_fixed.acidity_sulphates <- redWine %>%
+  filter(!is.na(sulphates)) %>%
+  group_by(fixed.acidity, sulphates) %>%
+  summarise(mean_quality = mean(quality),
+            median_quality = median(quality),
+            n =n()) %>%
+  ungroup() %>%
+  arrange(fixed.acidity)
+
+ggplot(aes(x = fixed.acidity, y = median_quality),
+       data = redWine.quality_by_fixed.acidity_sulphates) +
+  geom_line(aes(color = sulphates,))
+```
+
+>Since I didn't find anything terribly meaningful above, I wanted to explore three other variables. As discussed in the bivariates section, I am interested in looking into sulphates and fixed acidity's correlation to quality.
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+>I think adding the third variable to the evaluations was enlightening. Even though I haven't quite created the ideal chart, additional variables means additional information. Also, adding color, espesially on the alcohol variable, allowed better understanding of how levels of various chemicals impact the quality rating of red wines.
+
+### Were there any interesting or surprising interactions between features?
+>The "quality" chart was the most helpful - it seems that as pH and alcohol levels were positively correlated. I like that I seem to have finally found a couple of variables that, together, affect quality ratings. This was my goal within this section. 
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+qplot(x = citric.acid, data = redWine, binwidth = .01) +
+  ggtitle("Citric Acid Levels") + xlab("Citric Acid Content (g)") + ylab("Number of Samples")
+```
+### Description One
+>In the univariate section, I wanted to see how many wines from the dataset contained what levels of citric acid, as citric acid was a variable of particulat interest to me. This histogram, in which I adjusted bin sizes in a way to show distribution in a way that made sense, plots the various levels present in the data set.
+
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(aes(x = total.sulfur.dioxide, y = free.sulfur.dioxide), data = redWine) +
+  geom_jitter() +
+  ggtitle("Total Sulfur Dioxide by Free Sulfur Dioxide") + xlab("Total Sulfur Dioxide (mg)") + ylab("Free Sulfur Dioxide (mg)")
+```
+
+### Description Two
+>Bivariate section: I found the results of this calculation very satisfying. It's a nice cone shape. I also think it gives some insight into how the data in our data set is correlated. In red wines, a given wine can be expected to have more total sulfur dioxide the more free sulfur dioxide is present, and vice versa.
+
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+redWine.alcohol_by_ph_quality <- redWine %>%
+  filter(!is.na(quality)) %>%
+  group_by(pH, quality) %>%
+  summarise(mean_alcohol = mean(alcohol),
+            median_alcohol = median(alcohol),
+            n =n()) %>%
+  ungroup() %>%
+  arrange(pH)
+
+ggplot(aes(x = pH, y = median_alcohol),
+       data = redWine.alcohol_by_ph_quality) +
+  geom_line(aes(color = quality)) +
+  ggtitle("Quality Rating by pH and Alcohol Content") + xlab("Units of pH") + ylab("Alcohol, content percentage")
+```
+
+
+### Description Three
+
+>For the multivariate section, I made this graph showing the relationship between pH, median alcohol levels, and qulity ratings. It shows an upward trend. The higher the alcohol level, the higher the pH can be expected to be. This is not always the case, but the data trends in that direction. The quality comes into play in this graph as indicated by color. There does not appear to be a direct correlation between either of these variables and quality rating. 
+------
+
+# Reflection
+
+>For this project I conducted exploratory data analysis on the Red Wines dataset. I enjoyed trying different types of visualizations on various variables, switching them around to get different results. Correlations in data sets are very interesting to look at, as they can identify trends and patterns in the data.
+
+>I started with the assumption that one or two or the combination of a few variables (i.e., the levels of various chemical componants present in the wines)
+would directly correlate to quality ratings. However, I gained insight into the fact that there was no direct, 1-to-1 correlation that predicted quality rating.
+
+>I think that future exploration of this data set could go more in depth with the variables alcohol, pH, and quality. Mathmatical models that are outside of the scope of this project could be created to show in-depth insight into how these three interact with one another.
